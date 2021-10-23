@@ -1,4 +1,5 @@
 import datetime as dt
+import pytz
 import json
 import os
 from typing import Any, List, Tuple
@@ -33,6 +34,7 @@ DB_INITIAL = {
         "prediction_days": 60,
     }
 }
+TZ = pytz.timezone("Asia/Singapore")
 
 
 def tg_error_handler(update, context: CallbackContext) -> None:
@@ -45,7 +47,7 @@ def tg_error_handler(update, context: CallbackContext) -> None:
 
 
 def tg_all_handler(update, context: CallbackContext):
-    logger.info("Chat ID: {}", update.effective_message.chat_id)
+    logger.info("Chat ID: {}", update.effective_chat.id)
     logger.info("Received message: {}", update.effective_message.text)
 
 
@@ -275,6 +277,8 @@ def crypto_prediction(update, context: CallbackContext):
 @send_typing_action
 @logger.catch
 def send_crypto_update(context: CallbackContext):
+    logger.info("Sending crypto update...")
+
     context.bot.send_message(
         chat_id=CHAT_ID_CRYPTO_INFO,
         text="Good morning! Here's your crypto update for today:",
@@ -299,7 +303,14 @@ def main():
     dispatcher.add_handler(MessageHandler(Filters.all, tg_all_handler), group=1)
     dispatcher.add_error_handler(tg_error_handler)
 
-    job_queue.run_daily(send_crypto_update, time=dt.time(hour=7, minute=00, second=00))
+    job_queue.run_daily(
+        send_crypto_update,
+        time=dt.time(hour=7, minute=00, second=00, tzinfo=TZ),
+    )
+    logger.info(
+        "TZ: {}",
+        dt.time(hour=00, minute=00, second=00, tzinfo=TZ).tzinfo,
+    )
 
     updater.start_polling()
     logger.info("Bot started polling!")
